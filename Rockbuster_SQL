@@ -1,0 +1,201 @@
+SQL query for Rockbuter:
+
+Question: Which are the top 10 countries in terms of revenue for Rockbuster
+
+Query:
+SELECT 
+  D.country,
+  COUNT(A.customer_id) AS "Customer_Count"
+FROM 
+  customer A
+INNER JOIN 
+  address B ON A.address_id = B.address_id
+INNER JOIN 
+  city C ON B.city_id = C.city_id
+INNER JOIN
+  country D ON C.country_id = D.country_id
+GROUP BY 
+  D.country
+ORDER BY 
+  "Customer_Count" DESC
+LIMIT 10;
+
+
+
+Question: Which are the top 10 cities in terms of customer counts for Rockbuster
+
+Query:
+SELECT 
+  C.city,
+  D.country,
+  COUNT(A.customer_id) AS "Customer_Count"
+FROM 
+  customer A
+INNER JOIN 
+  address B ON A.address_id = B.address_id
+INNER JOIN 
+  city C ON B.city_id = C.city_id
+INNER JOIN 
+  country D ON C.country_id = D.country_id
+WHERE 
+  D.country IN (
+    SELECT 
+      D.country
+    FROM 
+      customer A
+    INNER JOIN 
+      address B ON A.address_id = B.address_id
+    INNER JOIN 
+      city C ON B.city_id = C.city_id
+    INNER JOIN 
+      country D ON C.country_id = D.country_id
+    GROUP BY
+      D.country
+    ORDER BY 
+      COUNT(A.customer_id) DESC
+  LIMIT 10
+)
+GROUP BY
+  C.city, D.country
+ORDER BY
+  "Customer_Count" DESC
+LIMIT 10;
+
+
+
+Question: Which movie genre performs best in terms of revenue
+
+Query:
+SELECT 
+  C.name AS genre,
+  SUM(P.amount) AS total_revenue
+FROM 
+  payment P
+INNER JOIN 
+  rental R ON P.rental_id = R.rental_id
+INNER JOIN 
+  inventory I ON R.inventory_id = I.inventory_id
+INNER JOIN 
+  film F ON I.film_id = F.film_id
+INNER JOIN
+  film_category FC ON F.film_id = FC.film_id
+INNER JOIN
+  category C ON FC.category_id = C.category_id
+GROUP BY
+  C.name
+ORDER BY
+  total_revenue DESC;
+
+
+
+Question: Which movie titles perform best in terms of revenue for Rockbuster
+
+Query:
+SELECT 
+    F.title AS movie_title,
+    SUM(P.amount) AS total_revenue
+FROM 
+    payment P
+INNER JOIN 
+    rental R ON P.rental_id = R.rental_id
+INNER JOIN
+    inventory I ON R.inventory_id = I.inventory_id
+INNER JOIN
+    film F ON I.film_id = F.film_id
+GROUP BY 
+    F.title
+ORDER BY
+    total_revenue DESC;
+
+
+
+Question: Which movies have performed best in terms of revenue in the top 10 countries
+
+
+Query:
+WITH top_10_countries AS (
+    SELECT 
+        ctr.country, 
+        COUNT(DISTINCT cust.customer_id) AS customer_count
+    FROM 
+        customer cust
+    INNER JOIN
+        address addr ON cust.address_id = addr.address_id
+    INNER JOIN
+        city cit ON addr.city_id = cit.city_id
+    INNER JOIN
+        country ctr ON cit.country_id = ctr.country_id
+    GROUP BY
+        ctr.country
+    ORDER BY
+        customer_count DESC
+    LIMIT 10
+),
+genre_revenue_in_top_10_countries AS (
+    SELECT 
+        cat.name AS genre,
+        SUM(pay.amount) AS total_genre_revenue
+    FROM 
+        payment pay
+    INNER JOIN
+        rental ren ON pay.rental_id = ren.rental_id
+    INNER JOIN
+        inventory inv ON ren.inventory_id = inv.inventory_id
+    INNER JOIN
+        film fil ON inv.film_id = fil.film_id
+    INNER JOIN
+        film_category fil_cat ON fil.film_id = fil_cat.film_id
+    INNER JOIN
+        category cat ON fil_cat.category_id = cat.category_id
+    INNER JOIN
+        customer cust ON pay.customer_id = cust.customer_id
+    INNER JOIN
+        address addr ON cust.address_id = addr.address_id
+    INNER JOIN
+        city cit ON addr.city_id = cit.city_id
+    INNER JOIN
+        country ctr ON cit.country_id = ctr.country_id
+    WHERE
+        ctr.country IN (SELECT country FROM top_10_countries)
+    GROUP BY
+        cat.name
+)
+SELECT 
+  fil.title AS movie_title,
+  cat.name AS genre,
+  SUM(pay.amount) AS total_revenue,
+  ctr.country,
+  genre_revenue_in_top_10_countries.total_genre_revenue AS total_genre_revenue_in_top_10_countries
+FROM 
+  payment pay
+INNER JOIN 
+  rental ren ON pay.rental_id = ren.rental_id
+INNER JOIN
+  inventory inv ON ren.inventory_id = inv.inventory_id
+INNER JOIN
+  film fil ON inv.film_id = fil.film_id
+INNER JOIN
+  film_category fil_cat ON fil.film_id = fil_cat.film_id
+INNER JOIN
+  category cat ON fil_cat.category_id = cat.category_id
+INNER JOIN
+  customer cust ON pay.customer_id = cust.customer_id
+INNER JOIN
+  address addr ON cust.address_id = addr.address_id
+INNER JOIN
+  city cit ON addr.city_id = cit.city_id
+INNER JOIN
+  country ctr ON cit.country_id = ctr.country_id
+LEFT JOIN
+  genre_revenue_in_top_10_countries
+ON 
+  cat.name = genre_revenue_in_top_10_countries.genre
+WHERE 
+  ctr.country IN (SELECT country FROM top_10_countries)
+GROUP BY
+  fil.title, cat.name, ctr.country, genre_revenue_in_top_10_countries.total_genre_revenue
+ORDER BY
+  total_revenue DESC
+LIMIT 10;
+
+
