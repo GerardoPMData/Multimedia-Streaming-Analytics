@@ -1,5 +1,5 @@
 Project Description:
-Rockbuster Stealth LLC - Movie rental stats using SQL:
+Rockbuster Stealth LLC - Movie rental stats using SQL.
 
 The following repository contains SQL code created in order to assess Rockbuster Stealth's business questions. 
 The company’s objectives are to obtain insights through their data to make a successful transition into streaming services.
